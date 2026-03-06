@@ -1,0 +1,2112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Deduplicator</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0b;
+            --bg-secondary: #141416;
+            --bg-tertiary: #1c1c1f;
+            --bg-hover: #252528;
+            --border: #2a2a2e;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1a6;
+            --text-muted: #6b6b70;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --purple: #a855f7;
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1800px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .logo-text { font-size: 1.25rem; font-weight: 700; }
+
+        .header-actions { display: flex; gap: 0.5rem; }
+
+        .stats { display: flex; gap: 2rem; }
+
+        .stat { text-align: right; }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-primary);
+            text-transform: uppercase;
+        }
+
+        .main { max-width: 1800px; margin: 0 auto; padding: 2rem; }
+
+        .info-banner {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            border-radius: var(--radius-sm);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .page-info { color: var(--text-secondary); font-size: 0.9rem; }
+
+        .pagination { display: flex; gap: 0.5rem; }
+
+        .btn {
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 0.625rem 1rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--text-muted); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-sm { padding: 0.375rem 0.625rem; font-size: 0.8rem; }
+        .btn-danger { background: var(--danger); border-color: var(--danger); }
+        .btn-danger:hover:not(:disabled) { background: var(--danger-hover); }
+        .btn-warning { background: var(--warning); border-color: var(--warning); color: #000; }
+        .btn-warning:hover:not(:disabled) { background: #d97706; }
+        .btn-purple { background: var(--purple); border-color: var(--purple); color: #fff; }
+        .btn-purple:hover:not(:disabled) { background: #9333ea; }
+
+        .groups { display: flex; flex-direction: column; gap: 1.5rem; }
+
+        .group {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .group-title { display: flex; align-items: center; gap: 0.75rem; }
+
+        .group-count {
+            background: var(--warning);
+            color: #000;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+        }
+
+        .group-count.completed {
+            background: var(--success);
+            color: #fff;
+        }
+
+        .group-count.auto-complete {
+            background: var(--success);
+            color: #fff;
+        }
+
+        .group-hash {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .group-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+        .group-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 16px;
+            background: var(--bg-primary);
+        }
+
+        /* Smaller thumbnails with aspect ratio */
+        .image-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            position: relative;
+            width: 200px;
+        }
+
+        .image-thumb-container {
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 150px;
+        }
+
+        .image-thumb {
+            max-width: 100%;
+            max-height: 150px;
+            width: auto;
+            height: auto;
+            display: block;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .image-card:hover .image-thumb { transform: scale(1.05); }
+
+        .distance-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            padding: 0.15rem 0.3rem;
+            border-radius: 4px;
+            color: var(--text-muted);
+        }
+
+        .distance-badge.exact {
+            background: var(--success);
+            border-color: var(--success);
+            color: #000;
+        }
+
+        .status-badge {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            z-index: 5;
+        }
+
+        .status-badge.dup {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        .status-badge.skip {
+            background: var(--text-muted);
+            color: #fff;
+        }
+
+        .status-badge.keeper {
+            background: var(--success);
+            color: #fff;
+        }
+
+        /* Page-level cluster status bar */
+        .cluster-status-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            transition: box-shadow 0.3s, border-color 0.3s;
+        }
+
+        .cluster-status-bar.flash {
+            box-shadow: 0 0 20px var(--accent), inset 0 0 10px rgba(99, 102, 241, 0.2);
+            border-color: var(--accent);
+        }
+
+        /* Progress Bar Popup */
+        .progress-bar-popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2500;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .progress-bar-popup.active {
+            display: flex;
+        }
+
+        .progress-bar-popup-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow: auto;
+        }
+
+        .progress-bar-popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .progress-bar-popup-bars {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            min-width: 300px;
+        }
+
+        .progress-bar-popup-bars .cluster-status-rect {
+            width: 28px;
+            height: 20px;
+        }
+
+        .progress-bar-popup-hint {
+            margin-top: 1rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .cluster-status-rect {
+            width: 24px;
+            height: 16px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .cluster-status-rect:hover {
+            transform: scale(1.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .cluster-status-rect.incomplete {
+            background: var(--warning);
+        }
+
+        .cluster-status-rect.complete {
+            background: var(--success);
+        }
+
+        /* Lightbox image status bar */
+        .image-status-bar {
+            display: flex;
+            gap: 4px;
+            margin-top: 0.5rem;
+            justify-content: center;
+        }
+
+        .image-status-rect {
+            width: 20px;
+            height: 12px;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .image-status-rect:hover {
+            transform: scale(1.2);
+        }
+
+        .image-status-rect.current {
+            border: 2px solid #fff;
+        }
+
+        .image-status-rect.pending {
+            background: var(--text-muted);
+        }
+
+        .image-status-rect.dup {
+            background: var(--danger);
+        }
+
+        .image-status-rect.skip {
+            background: #6b7280;
+        }
+
+        .image-status-rect.keeper {
+            background: var(--success);
+        }
+
+        .missing-badge {
+            padding: 2rem;
+            color: var(--danger);
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+
+        .image-meta-panel {
+            padding: 8px 10px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+        }
+
+        .image-name {
+            font-size: 0.7rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+
+        .image-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+        }
+
+        /* Tags display */
+        .image-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 6px;
+        }
+
+        .tag {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .tag.red { background: #7f1d1d; border-color: #991b1b; color: #fca5a5; }
+        .tag.orange { background: #7c2d12; border-color: #9a3412; color: #fdba74; }
+        .tag.yellow { background: #713f12; border-color: #854d0e; color: #fde047; }
+        .tag.green { background: #14532d; border-color: #166534; color: #86efac; }
+        .tag.blue { background: #1e3a5f; border-color: #1e40af; color: #93c5fd; }
+        .tag.purple { background: #4c1d95; border-color: #5b21b6; color: #c4b5fd; }
+        .tag.gray { background: #374151; border-color: #4b5563; color: #d1d5db; }
+
+        /* Lightbox */
+        .lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            flex-direction: column;
+        }
+
+        .lightbox.active { display: flex; }
+
+        .lightbox-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .lightbox-actions { display: flex; gap: 0.5rem; align-items: center; }
+
+        .lightbox-actions .action-btn {
+            min-width: 110px;
+            text-align: center;
+            justify-content: center;
+        }
+
+        .lightbox-actions .action-btn.hidden {
+            visibility: hidden;
+        }
+
+        .btn-secondary {
+            background: var(--text-muted);
+            color: var(--bg-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--text-secondary);
+        }
+
+        .lightbox-body {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            padding: 1rem;
+            min-height: 200px;
+            overflow: hidden;
+        }
+
+        .lightbox-content img {
+            max-width: 90vw;
+            max-height: calc(100vh - 300px);
+            object-fit: contain;
+            border-radius: var(--radius);
+        }
+
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 56px;
+            height: 56px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .lightbox-nav:hover:not(:disabled) { background: var(--bg-hover); }
+        .lightbox-nav:disabled { opacity: 0.3; cursor: not-allowed; }
+        .lightbox-prev { left: 1rem; }
+        .lightbox-next { right: 1rem; }
+
+        .lightbox-footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+            max-height: 40vh;
+            overflow-y: auto;
+        }
+
+        .lightbox-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .lightbox-details h3 {
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+            word-break: break-all;
+        }
+
+        .lightbox-details p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .lightbox-path {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 0.5rem;
+            word-break: break-all;
+        }
+
+        .lightbox-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 0.75rem;
+        }
+
+        .lightbox-tags .tag {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .lightbox-tags .tag:hover { opacity: 0.8; }
+
+        .lightbox-tags .tag .delete-tag {
+            display: none;
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 16px;
+            height: 16px;
+            background: var(--danger);
+            border-radius: 50%;
+            font-size: 10px;
+            line-height: 16px;
+            text-align: center;
+            color: white;
+        }
+
+        .lightbox-tags .tag:hover .delete-tag { display: block; }
+
+        .tag-input-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            align-items: center;
+        }
+
+        .tag-input {
+            flex: 1;
+            max-width: 200px;
+            padding: 0.4rem 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            font-family: inherit;
+        }
+
+        .tag-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .tag-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Tag Popup */
+        .tag-popup {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .tag-popup.active {
+            display: flex;
+        }
+
+        .tag-popup-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            min-width: 300px;
+            max-width: 90vw;
+        }
+
+        .tag-popup-content label {
+            display: block;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .tag-popup-content .tag-input {
+            width: 100%;
+            padding: 0.75rem;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .tag-popup-buttons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
+        /* Progress Report */
+        .progress-btn {
+            position: relative;
+        }
+
+        .progress-report {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            min-width: 280px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .progress-btn:hover .progress-report,
+        .progress-report:hover,
+        .progress-report.pinned {
+            display: block;
+        }
+
+        .progress-report h4 {
+            margin: 0 0 0.75rem 0;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .progress-report p {
+            margin: 0.4rem 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .progress-report .value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .progress-report .percent {
+            color: var(--success);
+        }
+
+        .target-settings {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .target-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .target-row label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            min-width: 90px;
+        }
+
+        .target-row input {
+            width: 100px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+        }
+
+        .target-row input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .target-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .target-buttons .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .lightbox-counter {
+            font-size: 0.8rem;
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .empty-state, .loading { text-align: center; padding: 4rem 2rem; }
+        .empty-state-icon { font-size: 4rem; margin-bottom: 1rem; }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .toast {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 1rem 1.25rem;
+            font-size: 0.9rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .toast.success { border-color: var(--success); }
+        .toast.error { border-color: var(--danger); }
+
+        @media (max-width: 768px) {
+            .header-content { flex-direction: column; }
+            .image-card { width: 100%; }
+            .lightbox-info { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">🔍</div>
+                <span class="logo-text">Image Deduplicator</span>
+            </div>
+            <div class="header-actions">
+                <div class="progress-btn">
+                    <button class="btn" onclick="exportProgressReport()">📈 Progress</button>
+                    <div class="progress-report" id="progress-report">
+                        <h4>Progress Report</h4>
+                        <p>Total Images: <span class="value" id="prog-total-images">-</span><span id="prog-target-images-display"></span></p>
+                        <p>Groups: <span class="value" id="prog-groups">-</span><span id="prog-target-groups-display"></span> at threshold <span class="value" id="prog-threshold">-</span></p>
+                        <p>Processed Images: <span class="value" id="prog-proc-images">-</span> <span class="percent" id="prog-proc-images-pct"></span><span class="percent" id="prog-proc-images-target-pct"></span></p>
+                        <p>Processed Groups: <span class="value" id="prog-proc-groups">-</span> <span class="percent" id="prog-proc-groups-pct"></span><span class="percent" id="prog-proc-groups-target-pct"></span></p>
+                        <div class="target-settings" onclick="event.stopPropagation()">
+                            <div class="target-row">
+                                <label>Target Images:</label>
+                                <input type="number" id="target-images-input" placeholder="e.g. 3928">
+                            </div>
+                            <div class="target-row">
+                                <label>Target Groups:</label>
+                                <input type="number" id="target-groups-input" placeholder="e.g. 1829">
+                            </div>
+                            <div class="target-buttons">
+                                <button class="btn btn-sm" onclick="saveTargets()">Save</button>
+                                <button class="btn btn-sm" onclick="clearTargets()">Clear</button>
+                            </div>
+                        </div>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Click button to export report</p>
+                    </div>
+                </div>
+                <a href="/api/export/csv" class="btn">📊 Export CSV</a>
+                <a href="/api/export/txt" class="btn">📄 Export TXT</a>
+            </div>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="stat-images">-</div>
+                    <div class="stat-label">Total Images</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="stat-groups">-</div>
+                    <div class="stat-label">Duplicate Groups</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="stat-threshold">-</div>
+                    <div class="stat-label">Threshold</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="info-banner">
+            <strong>View-Only Mode:</strong> Click images to view full-size. Keys: ← → navigate (wraps), ↑ ↓ clusters, D dup, S skip, U unmark, M merge, C done, T tag, P progress popup.
+        </div>
+
+        <div class="controls">
+            <div class="page-info" id="page-info">Loading...</div>
+            <div class="pagination">
+                <button class="btn" id="btn-prev" disabled>← Previous</button>
+                <button class="btn" id="btn-next" disabled>Next →</button>
+            </div>
+        </div>
+
+        <div class="cluster-status-bar" id="cluster-status-bar"></div>
+
+        <div id="content">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading duplicate groups...</p>
+            </div>
+        </div>
+
+        <div class="controls" id="controls-bottom" style="display: none; margin-top: 2rem;">
+            <div class="page-info" id="page-info-bottom"></div>
+            <div class="pagination">
+                <button class="btn" id="btn-prev-bottom" disabled>← Previous</button>
+                <button class="btn" id="btn-next-bottom" disabled>Next →</button>
+                <button class="btn" onclick="scrollToTop()" title="Scroll to top">↑ Top</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Progress Bar Popup -->
+    <div class="progress-bar-popup" id="progress-bar-popup">
+        <div class="progress-bar-popup-content">
+            <div class="progress-bar-popup-header">
+                <span>Page Progress</span>
+                <button class="btn btn-sm" onclick="closeProgressBarPopup()">✕</button>
+            </div>
+            <div class="progress-bar-popup-bars" id="progress-bar-popup-bars"></div>
+            <div class="progress-bar-popup-hint">Click a square to jump to that cluster</div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-header">
+            <div class="lightbox-counter" id="lightbox-counter">Image 1 of 3</div>
+            <div class="image-status-bar" id="image-status-bar"></div>
+            <div class="lightbox-actions">
+                <button class="btn btn-purple action-btn" id="btn-merge-tags" onclick="mergeTagsFromLightbox()">🔀 Merge Tags</button>
+                <button class="btn btn-warning action-btn" id="btn-mark-dup" onclick="markAsDuplicate()">🏷️ Mark DUP</button>
+                <button class="btn btn-secondary action-btn" id="btn-mark-skip" onclick="markAsSkip()">⏭️ Skip</button>
+                <button class="btn action-btn" id="btn-unmark" onclick="unmarkFile()">↩️ Unmark</button>
+                <button class="btn action-btn" id="btn-toggle-complete" onclick="toggleComplete()">✓ Done</button>
+                <button class="btn action-btn" onclick="closeLightbox()">✕ Close</button>
+            </div>
+        </div>
+        <div class="lightbox-body">
+            <button class="lightbox-nav lightbox-prev" id="lightbox-prev" onclick="navigateLightbox(-1)">‹</button>
+            <div class="lightbox-content">
+                <img id="lightbox-img" src="" alt="">
+            </div>
+            <button class="lightbox-nav lightbox-next" id="lightbox-next" onclick="navigateLightbox(1)">›</button>
+        </div>
+        <div class="lightbox-footer">
+            <div class="lightbox-info">
+                <div class="lightbox-details">
+                    <h3 id="lightbox-name"></h3>
+                    <p id="lightbox-meta"></p>
+                    <div class="lightbox-path" id="lightbox-path"></div>
+                    <div class="lightbox-tags" id="lightbox-tags"></div>
+                
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tag Input Popup -->
+    <div class="tag-popup" id="tag-popup">
+        <div class="tag-popup-content">
+            <label>Add tag to current image:</label>
+            <input type="text" class="tag-input" id="tag-input" placeholder="Enter tag name..." maxlength="50" autocomplete="off">
+            <div class="tag-popup-buttons">
+                <button class="btn btn-sm" onclick="addTagFromInput()">Add</button>
+                <button class="btn btn-sm" onclick="closeTagPopup()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        const perPage = 25;
+        let tagsSupported = false;
+        let groupsData = {};  // Store group data for lightbox
+
+        // Lightbox state
+        let currentGroupId = null;
+        let currentLightboxIndex = 0;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Read page from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const pageParam = parseInt(urlParams.get('page'));
+            if (pageParam && pageParam > 0) {
+                currentPage = pageParam;
+            }
+
+            await checkConfig();
+            loadStats();
+            loadGroups();
+
+            // Top pagination
+            document.getElementById('btn-prev').addEventListener('click', () => {
+                if (currentPage > 1) { currentPage--; loadGroups(); }
+            });
+            document.getElementById('btn-next').addEventListener('click', () => {
+                if (currentPage < totalPages) { currentPage++; loadGroups(); }
+            });
+
+            // Bottom pagination
+            document.getElementById('btn-prev-bottom').addEventListener('click', () => {
+                if (currentPage > 1) { currentPage--; loadGroups(); window.scrollTo(0, 0); }
+            });
+            document.getElementById('btn-next-bottom').addEventListener('click', () => {
+                if (currentPage < totalPages) { currentPage++; loadGroups(); window.scrollTo(0, 0); }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                // Handle tag popup
+                if (document.getElementById('tag-popup').classList.contains('active')) {
+                    if (e.key === 'Escape') {
+                        closeTagPopup();
+                        return;
+                    }
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addTagFromInput();
+                        return;
+                    }
+                    return; // Don't process other shortcuts when popup is open
+                }
+                
+                if (document.getElementById('lightbox').classList.contains('active')) {
+                    if (e.key === 'Escape') closeLightbox();
+                    if (e.key === 'ArrowLeft') navigateLightbox(-1);
+                    if (e.key === 'ArrowRight') navigateLightbox(1);
+                    if (e.key === 'ArrowDown') { 
+                        e.preventDefault(); 
+                        navigateCluster(1); 
+                    }
+                    if (e.key === 'ArrowUp') { 
+                        e.preventDefault(); 
+                        navigateCluster(-1); 
+                    }
+                    if (e.key === 'd' || e.key === 'D') markAsDuplicate();
+                    if (e.key === 's' || e.key === 'S') markAsSkip();
+                    if (e.key === 'u' || e.key === 'U') unmarkFile();
+                    if (e.key === 'm' || e.key === 'M') mergeTagsFromLightbox();
+                    if (e.key === 'c' || e.key === 'C') toggleComplete();
+                    if (e.key === 't' || e.key === 'T') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openTagPopup();
+                    }
+                    if (e.key === 'p' || e.key === 'P') {
+                        e.preventDefault();
+                        closeLightbox();
+                        openProgressBarPopup();
+                    }
+                } else {
+                    // Keys that work outside lightbox
+                    if (e.key === 'p' || e.key === 'P') {
+                        e.preventDefault();
+                        openProgressBarPopup();
+                    }
+                }
+            });
+        });
+
+        async function checkConfig() {
+            try {
+                const res = await fetch('/api/config');
+                const data = await res.json();
+                tagsSupported = data.tags_supported;
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadProgressStats() {
+            try {
+                const res = await fetch('/api/progress');
+                const data = await res.json();
+                
+                // Get targets from localStorage
+                const targetImages = localStorage.getItem('targetImages');
+                const targetGroups = localStorage.getItem('targetGroups');
+                
+                // Display current totals
+                document.getElementById('prog-total-images').textContent = data.total_images.toLocaleString();
+                document.getElementById('prog-groups').textContent = data.total_groups.toLocaleString();
+                document.getElementById('prog-threshold').textContent = data.threshold;
+                
+                // Display processed (from current scan only)
+                document.getElementById('prog-proc-images').textContent = data.processed_images.toLocaleString();
+                document.getElementById('prog-proc-groups').textContent = data.processed_groups.toLocaleString();
+                
+                // Calculate percentage against current total
+                document.getElementById('prog-proc-images-pct').textContent = `(${data.processed_images_pct}%)`;
+                document.getElementById('prog-proc-groups-pct').textContent = `(${data.processed_groups_pct}%)`;
+                
+                // Display target info if set (with auto-calculated baseline)
+                if (targetImages) {
+                    const ti = parseInt(targetImages);
+                    document.getElementById('prog-target-images-display').textContent = ` (${ti.toLocaleString()})`;
+                    
+                    // Auto-calculate baseline: work that "disappeared" from scan
+                    const baselineImages = Math.max(0, ti - data.total_images);
+                    // Total progress = baseline (completed & gone) + current processed
+                    const totalProcessedImages = baselineImages + data.processed_images;
+                    const targetPct = ti > 0 ? ((totalProcessedImages / ti) * 100).toFixed(1) : 0;
+                    document.getElementById('prog-proc-images-target-pct').textContent = ` (${targetPct}%)`;
+                    document.getElementById('target-images-input').value = ti;
+                } else {
+                    document.getElementById('prog-target-images-display').textContent = '';
+                    document.getElementById('prog-proc-images-target-pct').textContent = '';
+                    document.getElementById('target-images-input').value = '';
+                }
+                
+                if (targetGroups) {
+                    const tg = parseInt(targetGroups);
+                    document.getElementById('prog-target-groups-display').textContent = ` (${tg.toLocaleString()})`;
+                    
+                    // Auto-calculate baseline: work that "disappeared" from scan
+                    const baselineGroups = Math.max(0, tg - data.total_groups);
+                    // Total progress = baseline (completed & gone) + current processed
+                    const totalProcessedGroups = baselineGroups + data.processed_groups;
+                    const targetPct = tg > 0 ? ((totalProcessedGroups / tg) * 100).toFixed(1) : 0;
+                    document.getElementById('prog-proc-groups-target-pct').textContent = ` (${targetPct}%)`;
+                    document.getElementById('target-groups-input').value = tg;
+                } else {
+                    document.getElementById('prog-target-groups-display').textContent = '';
+                    document.getElementById('prog-proc-groups-target-pct').textContent = '';
+                    document.getElementById('target-groups-input').value = '';
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function saveTargets() {
+            const targetImages = document.getElementById('target-images-input').value;
+            const targetGroups = document.getElementById('target-groups-input').value;
+            
+            if (targetImages) {
+                localStorage.setItem('targetImages', targetImages);
+            } else {
+                localStorage.removeItem('targetImages');
+            }
+            
+            if (targetGroups) {
+                localStorage.setItem('targetGroups', targetGroups);
+            } else {
+                localStorage.removeItem('targetGroups');
+            }
+            
+            loadProgressStats();
+            showToast('Targets saved', 'success');
+        }
+
+        function clearTargets() {
+            localStorage.removeItem('targetImages');
+            localStorage.removeItem('targetGroups');
+            document.getElementById('target-images-input').value = '';
+            document.getElementById('target-groups-input').value = '';
+            loadProgressStats();
+            showToast('Targets cleared', 'success');
+        }
+
+        async function exportProgressReport() {
+            try {
+                const res = await fetch('/api/progress');
+                const data = await res.json();
+                
+                // Get targets from localStorage
+                const targetImages = localStorage.getItem('targetImages');
+                const targetGroups = localStorage.getItem('targetGroups');
+                
+                const now = new Date();
+                const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const filename = `progress-report-${timestamp}.txt`;
+                
+                // Build strings
+                let totalImagesStr = data.total_images.toLocaleString();
+                let totalGroupsStr = data.total_groups.toLocaleString();
+                let procImagesStr = `${data.processed_images.toLocaleString()} of ${data.total_images.toLocaleString()} (${data.processed_images_pct}%)`;
+                let procGroupsStr = `${data.processed_groups.toLocaleString()} of ${data.total_groups.toLocaleString()} (${data.processed_groups_pct}%)`;
+                
+                let baselineStr = '';
+                
+                if (targetImages) {
+                    const ti = parseInt(targetImages);
+                    const baselineImages = Math.max(0, ti - data.total_images);
+                    const totalProcessedImages = baselineImages + data.processed_images;
+                    totalImagesStr += ` (target: ${ti.toLocaleString()})`;
+                    const targetPct = ti > 0 ? ((totalProcessedImages / ti) * 100).toFixed(1) : 0;
+                    procImagesStr += ` (${targetPct}% of target)`;
+                    
+                    if (baselineImages > 0) {
+                        baselineStr += `\nCompleted & removed from scan: ${baselineImages.toLocaleString()} images`;
+                    }
+                }
+                
+                if (targetGroups) {
+                    const tg = parseInt(targetGroups);
+                    const baselineGroups = Math.max(0, tg - data.total_groups);
+                    const totalProcessedGroups = baselineGroups + data.processed_groups;
+                    totalGroupsStr += ` (target: ${tg.toLocaleString()})`;
+                    const targetPct = tg > 0 ? ((totalProcessedGroups / tg) * 100).toFixed(1) : 0;
+                    procGroupsStr += ` (${targetPct}% of target)`;
+                    
+                    if (baselineGroups > 0) {
+                        baselineStr += `\nCompleted & removed from scan: ${baselineGroups.toLocaleString()} groups`;
+                    }
+                }
+                
+                const report = `Image Deduplicator Progress Report
+Generated: ${now.toLocaleString()}
+============================================
+
+Total Images: ${totalImagesStr}
+Duplicate Groups: ${totalGroupsStr} (at threshold ${data.threshold})
+
+Processed Images: ${procImagesStr}
+Processed Groups: ${procGroupsStr}
+${baselineStr}
+`;
+                
+                const blob = new Blob([report], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                showToast(`Exported ${filename}`, 'success');
+            } catch (err) {
+                showToast('Failed to export report', 'error');
+            }
+        }
+
+        // Load progress stats when hovering over the progress button
+        document.addEventListener('DOMContentLoaded', () => {
+            const progressBtn = document.querySelector('.progress-btn');
+            const progressReport = document.getElementById('progress-report');
+            
+            if (progressBtn) {
+                progressBtn.addEventListener('mouseenter', loadProgressStats);
+            }
+            
+            // Keep report open when interacting with inputs
+            if (progressReport) {
+                progressReport.addEventListener('mouseenter', () => {
+                    progressReport.classList.add('pinned');
+                });
+                progressReport.addEventListener('mouseleave', () => {
+                    progressReport.classList.remove('pinned');
+                });
+            }
+        });
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                document.getElementById('stat-images').textContent = data.total_images.toLocaleString();
+                document.getElementById('stat-groups').textContent = data.total_groups.toLocaleString();
+                document.getElementById('stat-threshold').textContent = data.threshold;
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadGroups() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading...</p></div>';
+
+            try {
+                const res = await fetch(`/api/groups?page=${currentPage}&per_page=${perPage}`);
+                const data = await res.json();
+                totalPages = data.total_pages;
+                
+                // Update URL
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('page', currentPage);
+                window.history.replaceState({}, '', newUrl);
+                
+                // Update top pagination
+                const pageText = `Showing ${data.groups.length} groups (Page ${data.page} of ${data.total_pages})`;
+                document.getElementById('page-info').textContent = pageText;
+                document.getElementById('btn-prev').disabled = currentPage <= 1;
+                document.getElementById('btn-next').disabled = currentPage >= totalPages;
+                
+                // Update bottom pagination
+                document.getElementById('page-info-bottom').textContent = pageText;
+                document.getElementById('btn-prev-bottom').disabled = currentPage <= 1;
+                document.getElementById('btn-next-bottom').disabled = currentPage >= totalPages;
+                document.getElementById('controls-bottom').style.display = data.groups.length > 0 ? 'flex' : 'none';
+
+                if (data.groups.length === 0) {
+                    content.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✨</div><h2>No Duplicates Found</h2></div>';
+                    return;
+                }
+
+                // Store groups data
+                groupsData = {};
+                data.groups.forEach(g => groupsData[g.id] = g);
+
+                content.innerHTML = '<div class="groups" id="groups"></div>';
+                const groupsContainer = document.getElementById('groups');
+                data.groups.forEach(group => groupsContainer.appendChild(createGroupElement(group)));
+                
+                // Update the cluster status bar
+                updateClusterStatusBar();
+            } catch (err) {
+                console.error(err);
+                content.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><h2>Error Loading Data</h2></div>';
+            }
+        }
+
+        function createGroupElement(group) {
+            const div = document.createElement('div');
+            div.className = 'group';
+            div.id = `group-${group.id}`;
+
+            // Check if any images have different tags
+            const allTags = group.images.map(i => JSON.stringify(i.tags.sort()));
+            const hasDifferentTags = new Set(allTags).size > 1;
+
+            let mergeBtn = '';
+            if (tagsSupported && hasDifferentTags) {
+                mergeBtn = `<button class="btn btn-sm btn-purple" onclick="mergeTags(${group.id})">🔀 Merge Tags</button>`;
+            }
+
+            // Determine badge class
+            let badgeClass = '';
+            let badgeExtra = '';
+            if (group.unmarked_count <= 1) {
+                // Auto-complete: green, no checkmark
+                badgeClass = 'auto-complete';
+            } else if (group.completed) {
+                // Manually marked done with 2+ unmarked: green with checkmark
+                badgeClass = 'completed';
+                badgeExtra = ' ✓';
+            }
+            // else: incomplete, stays orange (no class)
+
+            div.innerHTML = `
+                <div class="group-header">
+                    <div class="group-title">
+                        <span class="group-count ${badgeClass}">${group.count} images${badgeExtra}</span>
+                        <span class="group-hash">Hash: ${group.hash}</span>
+                    </div>
+                    <div class="group-actions">
+                        ${mergeBtn}
+                    </div>
+                </div>
+                <div class="group-images">${group.images.map((img, i) => createImageCard(img, group, i)).join('')}</div>
+            `;
+            return div;
+        }
+
+        function createImageCard(img, group, index) {
+            const tagsHtml = img.tags.length > 0 
+                ? `<div class="image-tags">${img.tags.map(t => `<span class="tag ${getTagColor(t)}">${esc(t)}</span>`).join('')}</div>`
+                : '';
+
+            // Determine status badge
+            const isDup = img.filename.startsWith('DUP_');
+            const isSkip = img.filename.startsWith('SKIP_');
+            const isMarked = isDup || isSkip;
+            const unmarkedCount = group.images.filter(i => 
+                !i.filename.startsWith('DUP_') && !i.filename.startsWith('SKIP_')
+            ).length;
+            const isGroupComplete = group.completed || unmarkedCount <= 1;
+            const isKeeper = !isMarked && isGroupComplete;
+            
+            let statusBadge = '';
+            if (isDup) {
+                statusBadge = '<div class="status-badge dup">DUP</div>';
+            } else if (isSkip) {
+                statusBadge = '<div class="status-badge skip">SKIP</div>';
+            } else if (isKeeper) {
+                statusBadge = '<div class="status-badge keeper">✓</div>';
+            }
+
+            return `
+                <div class="image-card" id="card-${img.id}">
+                    <div class="image-thumb-container">
+                        <div class="distance-badge ${img.distance === 0 ? 'exact' : ''}">${img.distance === 0 ? 'EXACT' : 'd=' + img.distance}</div>
+                        ${statusBadge}
+                        ${img.exists ? 
+                            `<img class="image-thumb" src="/api/thumbnail/${img.id}" alt="${esc(img.filename)}" onclick="openLightbox(${group.id}, ${index})" loading="lazy">` : 
+                            '<div class="missing-badge">File Missing</div>'}
+                    </div>
+                    <div class="image-meta-panel">
+                        <div class="image-name" title="${esc(img.filepath)}">${esc(img.filename)}</div>
+                        <div class="image-meta"><span>📐 ${img.dimensions}</span><span>💾 ${img.filesize_formatted}</span></div>
+                        ${tagsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTagColor(tagName) {
+            // All tags show neutral gray (no auto-coloring based on name)
+            return '';
+        }
+
+        function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+        function openLightbox(groupId, index) {
+            currentGroupId = groupId;
+            currentLightboxIndex = index;
+            updateLightbox();
+            document.getElementById('lightbox').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function updateLightbox() {
+            const group = groupsData[currentGroupId];
+            if (!group) return;
+            
+            const img = group.images[currentLightboxIndex];
+            document.getElementById('lightbox-img').src = `/api/image/${img.id}`;
+            document.getElementById('lightbox-name').textContent = img.filename;
+            document.getElementById('lightbox-meta').textContent = `${img.dimensions} • ${img.filesize_formatted}`;
+            document.getElementById('lightbox-path').textContent = img.filepath;
+            document.getElementById('lightbox-counter').textContent = `Image ${currentLightboxIndex + 1} of ${group.images.length} in cluster`;
+            
+            // Get button elements
+            const dupBtn = document.getElementById('btn-mark-dup');
+            const skipBtn = document.getElementById('btn-mark-skip');
+            const unmarkBtn = document.getElementById('btn-unmark');
+            const completeBtn = document.getElementById('btn-toggle-complete');
+            
+            // Count unmarked files (not DUP_ or SKIP_)
+            const unmarkedCount = group.images.filter(i => 
+                !i.filename.startsWith('DUP_') && !i.filename.startsWith('SKIP_')
+            ).length;
+            
+            const isDup = img.filename.startsWith('DUP_');
+            const isSkip = img.filename.startsWith('SKIP_');
+            const isMarked = isDup || isSkip;
+            const isLastUnmarked = unmarkedCount <= 1 && !isMarked;
+            
+            // Reset all buttons
+            dupBtn.classList.remove('hidden');
+            skipBtn.classList.remove('hidden');
+            unmarkBtn.classList.remove('hidden');
+            completeBtn.classList.remove('hidden');
+            dupBtn.disabled = false;
+            skipBtn.disabled = false;
+            dupBtn.textContent = '🏷️ Mark DUP';
+            skipBtn.textContent = '⏭️ Skip';
+            
+            if (isMarked) {
+                // File is already marked - show Unmark, hide DUP/Skip
+                dupBtn.classList.add('hidden');
+                skipBtn.classList.add('hidden');
+            } else if (isLastUnmarked) {
+                // Last unmarked file - disable DUP/Skip, hide Unmark
+                dupBtn.disabled = true;
+                skipBtn.disabled = true;
+                dupBtn.textContent = '🔒 Last file';
+                skipBtn.textContent = '🔒 Last file';
+                unmarkBtn.classList.add('hidden');
+            } else {
+                // Normal state - show DUP/Skip, hide Unmark
+                unmarkBtn.classList.add('hidden');
+            }
+
+            // Update Done button state
+            if (unmarkedCount <= 1) {
+                completeBtn.classList.add('hidden');  // Auto-complete, no need for button
+            } else if (group.completed) {
+                completeBtn.textContent = '↩ Undo Done';
+            } else {
+                completeBtn.textContent = '✓ Done';
+            }
+
+            // Tags with delete option
+            const tagsContainer = document.getElementById('lightbox-tags');
+            if (img.tags.length > 0) {
+                tagsContainer.innerHTML = img.tags.map(t => 
+                    `<span class="tag ${getTagColor(t)}" onclick="event.stopPropagation()">
+                        ${esc(t)}
+                        <span class="delete-tag" onclick="deleteTag(${img.id}, '${esc(t)}')">×</span>
+                    </span>`
+                ).join('');
+            } else {
+                tagsContainer.innerHTML = '<span style="color: var(--text-muted); font-size: 0.75rem;">No tags</span>';
+            }
+
+            // Nav buttons always enabled now (wrap-around navigation)
+            document.getElementById('lightbox-prev').disabled = false;
+            document.getElementById('lightbox-next').disabled = false;
+            
+            // Update image status bar
+            updateImageStatusBar();
+        }
+
+        function navigateLightbox(dir) {
+            const group = groupsData[currentGroupId];
+            if (!group) return;
+            
+            // Wrap-around navigation
+            let newIdx = currentLightboxIndex + dir;
+            if (newIdx < 0) {
+                newIdx = group.images.length - 1;  // Wrap to last
+            } else if (newIdx >= group.images.length) {
+                newIdx = 0;  // Wrap to first
+            }
+            currentLightboxIndex = newIdx;
+            updateLightbox();
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+            document.body.style.overflow = '';
+            
+            // Update the group badge to reflect any changes
+            if (currentGroupId) {
+                updateGroupBadge(currentGroupId);
+            }
+            
+            // Flash the cluster status bar
+            flashClusterStatusBar();
+        }
+
+        function flashClusterStatusBar() {
+            const bar = document.getElementById('cluster-status-bar');
+            if (!bar) return;
+            
+            bar.classList.add('flash');
+            setTimeout(() => bar.classList.remove('flash'), 1500);
+        }
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function openProgressBarPopup() {
+            const popup = document.getElementById('progress-bar-popup');
+            const barsContainer = document.getElementById('progress-bar-popup-bars');
+            
+            // Populate with cluster status rectangles
+            const groupIds = Object.keys(groupsData).map(Number).sort((a, b) => a - b);
+            
+            barsContainer.innerHTML = groupIds.map(groupId => {
+                const group = groupsData[groupId];
+                const unmarkedCount = group.images.filter(i => 
+                    !i.filename.startsWith('DUP_') && !i.filename.startsWith('SKIP_')
+                ).length;
+                const isComplete = group.completed || unmarkedCount <= 1;
+                const statusClass = isComplete ? 'complete' : 'incomplete';
+                
+                return `<div class="cluster-status-rect ${statusClass}" 
+                             onclick="jumpToClusterFromPopup(${groupId})" 
+                             title="Cluster ${groupId}: ${group.count} images, ${isComplete ? 'complete' : 'incomplete'}"></div>`;
+            }).join('');
+            
+            popup.classList.add('active');
+            
+            // Auto-close after 1.5 seconds
+            setTimeout(() => {
+                closeProgressBarPopup();
+            }, 1500);
+        }
+
+        function closeProgressBarPopup() {
+            document.getElementById('progress-bar-popup').classList.remove('active');
+        }
+
+        function jumpToClusterFromPopup(groupId) {
+            closeProgressBarPopup();
+            const groupEl = document.getElementById(`group-${groupId}`);
+            if (groupEl) {
+                groupEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                groupEl.style.outline = '3px solid var(--accent)';
+                setTimeout(() => groupEl.style.outline = '', 1500);
+            }
+        }
+
+        function navigateCluster(direction) {
+            // Get ordered list of group IDs on current page
+            const groupIds = Object.keys(groupsData).map(Number).sort((a, b) => a - b);
+            const currentIdNum = Number(currentGroupId);
+            const currentIndex = groupIds.indexOf(currentIdNum);
+            
+            if (currentIndex === -1) {
+                console.log('Could not find current group in list');
+                return;
+            }
+            
+            const newIndex = currentIndex + direction;
+            
+            if (newIndex < 0 || newIndex >= groupIds.length) {
+                showToast(direction < 0 ? 'First cluster on page' : 'Last cluster on page', 'info');
+                return;
+            }
+            
+            // Update badge for current group before leaving
+            updateGroupBadge(currentGroupId);
+            updateGroupStatusBadges(currentGroupId);
+            
+            // Open new cluster
+            const newGroupId = groupIds[newIndex];
+            currentGroupId = newGroupId;
+            currentLightboxIndex = 0;
+            updateLightbox();
+            
+            // Scroll the group card into view
+            const groupEl = document.getElementById(`group-${newGroupId}`);
+            if (groupEl) {
+                groupEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function updateGroupBadge(groupId) {
+            const group = groupsData[groupId];
+            if (!group) return;
+            
+            // Recalculate unmarked count from current data
+            const unmarkedCount = group.images.filter(i => 
+                !i.filename.startsWith('DUP_') && !i.filename.startsWith('SKIP_')
+            ).length;
+            group.unmarked_count = unmarkedCount;
+            
+            // Find the badge element
+            const groupEl = document.getElementById(`group-${groupId}`);
+            if (!groupEl) return;
+            
+            const badge = groupEl.querySelector('.group-count');
+            if (!badge) return;
+            
+            // Determine new badge state
+            badge.classList.remove('completed', 'auto-complete');
+            
+            if (unmarkedCount <= 1) {
+                badge.classList.add('auto-complete');
+                badge.textContent = `${group.count} images`;
+            } else if (group.completed) {
+                badge.classList.add('completed');
+                badge.textContent = `${group.count} images ✓`;
+            } else {
+                badge.textContent = `${group.count} images`;
+            }
+        }
+
+        function updateGroupStatusBadges(groupId) {
+            const group = groupsData[groupId];
+            if (!group) return;
+            
+            const unmarkedCount = group.images.filter(i => 
+                !i.filename.startsWith('DUP_') && !i.filename.startsWith('SKIP_')
+            ).length;
+            const isGroupComplete = group.completed || unmarkedCount <= 1;
+            
+            group.images.forEach(img => {
+                const card = document.getElementById(`card-${img.id}`);
+                if (!card) return;
+                
+                const container = card.querySelector('.image-thumb-container');
+                if (!container) return;
+                
+                // Remove existing status badge
+                const existingBadge = container.querySelector('.status-badge');
+                if (existingBadge) existingBadge.remove();
+                
+                // Add new status badge if needed
+                const isDup = img.filename.startsWith('DUP_');
+                const isSkip = img.filename.startsWith('SKIP_');
+                const isMarked = isDup || isSkip;
+                const isKeeper = !isMarked && isGroupComplete;
+                
+                if (isDup) {
+                    const badge = document.createElement('div');
+                    badge.className = 'status-badge dup';
+                    badge.textContent = 'DUP';
+                    container.appendChild(badge);
+                } else if (isSkip) {
+                    const badge = document.createElement('div');
+                    badge.className = 'status-badge skip';
+                    badge.textContent = 'SKIP';
+                    container.appendChild(badge);
+                } else if (isKeeper) {
+                    const badge = document.createElement('div');
+                    badge.className = 'status-badge keeper';
+                    badge.textContent = '✓';
+                    container.appendChild(badge);
+                }
+            });
+            
+            // Update the cluster status bar
+            updateClusterStatusBar();
+        }
+
+        function updateClusterStatusBar() {
+            const bar = document.getElementById('cluster-status-bar');
+            if (!bar) return;
+            
+            const groupIds = Object.keys(groupsData).map(Number).sort((a, b) => a - b);
+            
+            bar.innerHTML = groupIds.map(groupId => {
+                const group = groupsData[groupId];
+                const unmarkedCount = group.images.filter(i => 
+                    !i.filename.startsWith('DUP_') && !i.filename.startsWith('SKIP_')
+                ).length;
+                const isComplete = group.completed || unmarkedCount <= 1;
+                const statusClass = isComplete ? 'complete' : 'incomplete';
+                
+                return `<div class="cluster-status-rect ${statusClass}" 
+                             onclick="scrollToCluster(${groupId})" 
+                             title="Cluster ${groupId}: ${group.count} images, ${isComplete ? 'complete' : 'incomplete'}"></div>`;
+            }).join('');
+        }
+
+        function scrollToCluster(groupId) {
+            const groupEl = document.getElementById(`group-${groupId}`);
+            if (groupEl) {
+                groupEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Brief highlight effect
+                groupEl.style.outline = '3px solid var(--accent)';
+                setTimeout(() => groupEl.style.outline = '', 1500);
+            }
+        }
+
+        function updateImageStatusBar() {
+            const bar = document.getElementById('image-status-bar');
+            if (!bar) return;
+            
+            const group = groupsData[currentGroupId];
+            if (!group) return;
+            
+            const unmarkedCount = group.images.filter(i => 
+                !i.filename.startsWith('DUP_') && !i.filename.startsWith('SKIP_')
+            ).length;
+            const isGroupComplete = group.completed || unmarkedCount <= 1;
+            
+            bar.innerHTML = group.images.map((img, idx) => {
+                const isDup = img.filename.startsWith('DUP_');
+                const isSkip = img.filename.startsWith('SKIP_');
+                const isMarked = isDup || isSkip;
+                const isKeeper = !isMarked && isGroupComplete;
+                const isCurrent = idx === currentLightboxIndex;
+                
+                let statusClass = 'pending';  // grey - not yet handled
+                if (isDup) {
+                    statusClass = 'dup';  // red
+                } else if (isSkip) {
+                    statusClass = 'skip';  // grey (different shade)
+                } else if (isKeeper) {
+                    statusClass = 'keeper';  // green
+                }
+                
+                const currentClass = isCurrent ? 'current' : '';
+                
+                return `<div class="image-status-rect ${statusClass} ${currentClass}" 
+                             onclick="goToImage(${idx})" 
+                             title="Image ${idx + 1}: ${isDup ? 'Duplicate' : isSkip ? 'Skipped' : isKeeper ? 'Keeper' : 'Pending'}"></div>`;
+            }).join('');
+        }
+
+        function goToImage(index) {
+            currentLightboxIndex = index;
+            updateLightbox();
+        }
+
+        async function markAsDuplicate() {
+            const group = groupsData[currentGroupId];
+            if (!group) return;
+            
+            const img = group.images[currentLightboxIndex];
+            if (img.filename.startsWith('DUP_') || img.filename.startsWith('SKIP_')) {
+                showToast('Already marked', 'error');
+                return;
+            }
+
+            // Safety check: don't allow marking the last unmarked file
+            const unmarkedCount = group.images.filter(i => 
+                !i.filename.startsWith('DUP_') && !i.filename.startsWith('SKIP_')
+            ).length;
+            if (unmarkedCount <= 1) {
+                showToast('Cannot mark the last remaining file!', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/rename-dup/${img.id}`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.error) {
+                    showToast(data.error, 'error');
+                    return;
+                }
+
+                // Update local data
+                img.filename = data.new_name;
+                img.filepath = data.new_path;
+                
+                showToast(`Renamed to ${data.new_name}`, 'success');
+                updateLightbox();
+                
+                // Update the card in the grid
+                const card = document.getElementById(`card-${img.id}`);
+                if (card) {
+                    card.querySelector('.image-name').textContent = data.new_name;
+                    card.querySelector('.image-name').title = data.new_path;
+                }
+                
+                // Update the group badge and status badges
+                updateGroupBadge(currentGroupId);
+                updateGroupStatusBadges(currentGroupId);
+            } catch (err) {
+                showToast('Failed to rename file', 'error');
+            }
+        }
+
+        async function markAsSkip() {
+            const group = groupsData[currentGroupId];
+            if (!group) return;
+            
+            const img = group.images[currentLightboxIndex];
+            if (img.filename.startsWith('DUP_') || img.filename.startsWith('SKIP_')) {
+                showToast('Already marked', 'error');
+                return;
+            }
+
+            // Safety check: don't allow marking the last unmarked file
+            const unmarkedCount = group.images.filter(i => 
+                !i.filename.startsWith('DUP_') && !i.filename.startsWith('SKIP_')
+            ).length;
+            if (unmarkedCount <= 1) {
+                showToast('Cannot mark the last remaining file!', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/rename-skip/${img.id}`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.error) {
+                    showToast(data.error, 'error');
+                    return;
+                }
+
+                // Update local data
+                img.filename = data.new_name;
+                img.filepath = data.new_path;
+                
+                showToast(`Renamed to ${data.new_name}`, 'success');
+                updateLightbox();
+                
+                // Update the card in the grid
+                const card = document.getElementById(`card-${img.id}`);
+                if (card) {
+                    card.querySelector('.image-name').textContent = data.new_name;
+                    card.querySelector('.image-name').title = data.new_path;
+                }
+                
+                // Update the group badge and status badges
+                updateGroupBadge(currentGroupId);
+                updateGroupStatusBadges(currentGroupId);
+            } catch (err) {
+                showToast('Failed to rename file', 'error');
+            }
+        }
+
+        async function unmarkFile() {
+            const group = groupsData[currentGroupId];
+            if (!group) return;
+            
+            const img = group.images[currentLightboxIndex];
+            if (!img.filename.startsWith('DUP_') && !img.filename.startsWith('SKIP_')) {
+                showToast('File is not marked', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/unmark/${img.id}`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.error) {
+                    showToast(data.error, 'error');
+                    return;
+                }
+
+                // Update local data
+                img.filename = data.new_name;
+                img.filepath = data.new_path;
+                
+                showToast(`Restored to ${data.new_name}`, 'success');
+                updateLightbox();
+                
+                // Update the card in the grid
+                const card = document.getElementById(`card-${img.id}`);
+                if (card) {
+                    card.querySelector('.image-name').textContent = data.new_name;
+                    card.querySelector('.image-name').title = data.new_path;
+                }
+                
+                // Update the group badge and status badges
+                updateGroupBadge(currentGroupId);
+                updateGroupStatusBadges(currentGroupId);
+            } catch (err) {
+                showToast('Failed to unmark file', 'error');
+            }
+        }
+
+        // Keep old function name for compatibility
+        async function unmarkDuplicate() {
+            return unmarkFile();
+        }
+
+        async function mergeTagsFromLightbox() {
+            const group = groupsData[currentGroupId];
+            if (!group) return;
+            
+            const imageIds = group.images.map(i => i.id);
+
+            try {
+                const res = await fetch('/api/tags/merge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_ids: imageIds })
+                });
+                const data = await res.json();
+                
+                if (data.error) {
+                    showToast(data.error, 'error');
+                    return;
+                }
+
+                if (data.errors && data.errors.length > 0) {
+                    showToast(`Errors: ${data.errors.map(e => e.error).join(', ')}`, 'error');
+                    return;
+                }
+
+                // Update local data for all images in group
+                group.images.forEach(img => {
+                    img.tags = data.merged_tags;
+                });
+
+                showToast(`Merged ${data.merged_tags.length} tags across ${data.files_updated} files`, 'success');
+                updateLightbox();
+                loadGroups();  // Refresh to show updated tags
+            } catch (err) {
+                showToast('Failed to merge tags', 'error');
+            }
+        }
+
+        async function toggleComplete() {
+            const group = groupsData[currentGroupId];
+            if (!group) return;
+            
+            // Don't allow toggling if auto-complete (only 1 unmarked)
+            const unmarkedCount = group.images.filter(i => 
+                !i.filename.startsWith('DUP_') && !i.filename.startsWith('SKIP_')
+            ).length;
+            if (unmarkedCount <= 1) {
+                showToast('Cluster auto-completed (only 1 file remaining)', 'info');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/group/${group.id}/toggle-complete`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.error) {
+                    showToast(data.error, 'error');
+                    return;
+                }
+
+                // Update local data
+                group.completed = data.completed;
+                
+                showToast(data.completed ? 'Marked as done' : 'Unmarked as done', 'success');
+                updateLightbox();
+                updateGroupBadge(currentGroupId);
+                updateGroupStatusBadges(currentGroupId);
+            } catch (err) {
+                showToast('Failed to toggle complete', 'error');
+            }
+        }
+
+        function openTagPopup() {
+            const popup = document.getElementById('tag-popup');
+            const input = document.getElementById('tag-input');
+            popup.classList.add('active');
+            input.value = '';
+            setTimeout(() => input.focus(), 50);
+        }
+
+        function closeTagPopup() {
+            document.getElementById('tag-popup').classList.remove('active');
+        }
+
+        async function addTagFromInput() {
+            const group = groupsData[currentGroupId];
+            if (!group) return;
+            
+            const img = group.images[currentLightboxIndex];
+            const input = document.getElementById('tag-input');
+            const newTag = input.value.trim();
+            
+            if (!newTag) {
+                showToast('Enter a tag name', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/tags/${img.id}/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tag: newTag })
+                });
+                const data = await res.json();
+                
+                if (data.error) {
+                    showToast(data.error, 'error');
+                    return;
+                }
+
+                // Update local data
+                img.tags = data.tags;
+                
+                showToast(`Added tag: ${newTag}`, 'success');
+                input.value = '';
+                closeTagPopup();
+                updateLightbox();
+                loadGroups();  // Refresh to show updated tags
+            } catch (err) {
+                showToast('Failed to add tag', 'error');
+            }
+        }
+
+        async function deleteTag(imageId, tagName) {
+            if (!tagsSupported) {
+                showToast('Tags not supported', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/tags/${imageId}/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tag: tagName })
+                });
+                const data = await res.json();
+                
+                if (data.error) {
+                    showToast(data.error, 'error');
+                    return;
+                }
+
+                // Update local data
+                const group = groupsData[currentGroupId];
+                const img = group.images.find(i => i.id === imageId);
+                if (img) {
+                    img.tags = data.remaining_tags;
+                }
+                
+                showToast(`Removed tag: ${tagName}`, 'success');
+                updateLightbox();
+                loadGroups();  // Refresh to update grid
+            } catch (err) {
+                showToast('Failed to delete tag', 'error');
+            }
+        }
+
+        async function mergeTags(groupId) {
+            const group = groupsData[groupId];
+            if (!group) return;
+
+            const imageIds = group.images.map(i => i.id);
+
+            try {
+                const res = await fetch('/api/tags/merge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_ids: imageIds })
+                });
+                const data = await res.json();
+                
+                if (data.error) {
+                    showToast(data.error, 'error');
+                    return;
+                }
+
+                showToast(`Merged ${data.merged_tags.length} tags across ${data.files_updated} files`, 'success');
+                loadGroups();  // Refresh to show updated tags
+            } catch (err) {
+                showToast('Failed to merge tags', 'error');
+            }
+        }
+
+        function showToast(msg, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = msg;
+            document.getElementById('toast-container').appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        document.getElementById('lightbox').addEventListener('click', e => {
+            if (e.target.classList.contains('lightbox-body')) closeLightbox();
+        });
+    </script>
+</body>
+</html>
